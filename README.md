@@ -90,13 +90,6 @@ mvn clean test package
 
 El JAR aparece en `target/`. Compose compila los seis proyectos con una imagen multi-stage de Maven.
 
-## GitHub
-
-Carpetas preparadas como repositorios separados: los cuatro servicios, Gateway, procesador local e infraestructura (`eventpass-local-infra`). La carpeta de infraestructura debe clonarse junto a las otras seis carpetas para que Compose encuentre sus build contexts. Sigue [PUBLICAR_EN_GITHUB.md](PUBLICAR_EN_GITHUB.md) para crear las ramas `main`, `develop` y `feature/...` y subirlas manualmente.
-
-## Video de evaluación
-
-En 3–8 minutos: explicar componentes/capas; mostrar PostgreSQL; probar roles, evento, orden pendiente, resultado asíncrono, aforo concurrente, CRUD y validación doble (200 luego 409); ejecutar Maven y mostrar JAR; explicar clonación/README. Narración con voz de los estudiantes, sonido claro y flujo ordenado.
 
 
 ## Ejecutar pruebas unitarias e integración

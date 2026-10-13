@@ -130,4 +130,3 @@ La colección envía todas las solicitudes a través de `http://localhost:8080`,
 Si una orden no cambia de estado, revisa los logs con `docker compose logs -f order-processor`, `docker compose logs -f localstack`, `docker compose logs -f events-service` y `docker compose logs -f tickets-service`. Para reintentar desde un estado limpio, `docker compose down -v` elimina la base local; úsalo solo si no necesitas conservar esos datos.
 
 
-> ¿Quieres la versión corta? Empieza con [EMPEZAR_AQUI.md](EMPEZAR_AQUI.md): iniciar con doble clic, importar una sola colección y ejecutar pruebas.

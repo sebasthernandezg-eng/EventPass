@@ -1,0 +1,10 @@
+package cl.eventpass.tickets.controller;
+import cl.eventpass.tickets.model.Ticket; import cl.eventpass.tickets.repository.TicketRepository; import cl.eventpass.tickets.security.TokenSupport;
+import jakarta.servlet.http.HttpServletRequest; import org.springframework.http.*; import org.springframework.transaction.annotation.Transactional; import org.springframework.web.bind.annotation.*; import org.springframework.web.server.ResponseStatusException; import java.util.*;
+@RestController @RequestMapping("/api/tickets") public class TicketController {
+ private final TicketRepository repo; public TicketController(TicketRepository r){repo=r;}
+ public record IssueRequest(Long orderId,Long eventId,Long buyerId,int quantity){}
+ @GetMapping("/mine") public List<Ticket> mine(HttpServletRequest r){var c=TokenSupport.require(r,"BUYER");return repo.findByBuyerId(Long.valueOf(c.subject()));}
+ @PostMapping("/internal/issue") @ResponseStatus(HttpStatus.CREATED) @Transactional public List<Ticket> issue(@RequestBody IssueRequest r){if(r.quantity()<1||r.quantity()>10)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Cantidad inválida");List<Ticket> list=new ArrayList<>(repo.findByOrderId(r.orderId()));if(list.size()>r.quantity())throw new ResponseStatusException(HttpStatus.CONFLICT,"La orden ya tiene más tickets que los solicitados");for(int i=list.size();i<r.quantity();i++)list.add(new Ticket(r.orderId(),r.eventId(),r.buyerId()));return repo.saveAll(list);}
+ @PostMapping("/validate/{code}") @Transactional public Map<String,Object> validate(@PathVariable String code,HttpServletRequest request){TokenSupport.require(request,"STAFF");int n=repo.useOnce(code);if(n==0){Ticket t=repo.findByAccessCode(code).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND,"Código inexistente"));throw new ResponseStatusException(HttpStatus.CONFLICT,t.isUsed()?"Código ya utilizado":"No se pudo validar");}Ticket t=repo.findByAccessCode(code).orElseThrow();return Map.of("valid",true,"message","Ingreso autorizado","ticketId",t.getId(),"eventId",t.getEventId());}
+}

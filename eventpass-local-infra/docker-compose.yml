@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: eventpass
+      POSTGRES_PASSWORD: eventpass_local_only
+      POSTGRES_DB: postgres
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventpass -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      SERVICES: sqs
+      DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports: ["4566:4566"]
+    volumes:
+      - ./infra/localstack:/etc/localstack/init/ready.d:ro
+    healthcheck:
+      test: ["CMD", "bash", "-c", "awslocal sqs list-queues >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  auth-service:
+    build: ../eventpass-auth-service
+    environment: &appenv
+      JWT_SECRET: ${JWT_SECRET:-local-demo-secret-change-before-sharing-123456789}
+      DB_USER: eventpass
+      DB_PASSWORD: eventpass_local_only
+      DB_URL: jdbc:postgresql://postgres:5432/eventpass_auth
+    depends_on:
+      postgres: {condition: service_healthy}
+    expose: ["8081"]
+
+  events-service:
+    build: ../eventpass-events-service
+    environment:
+      <<: *appenv
+      DB_URL: jdbc:postgresql://postgres:5432/eventpass_events
+      SERVER_PORT: 8082
+    depends_on:
+      postgres: {condition: service_healthy}
+    expose: ["8082"]
+
+  orders-service:
+    build: ../eventpass-orders-service
+    environment:
+      <<: *appenv
+      DB_URL: jdbc:postgresql://postgres:5432/eventpass_orders
+      SERVER_PORT: 8083
+      SQS_ENDPOINT: http://localstack:4566
+      SQS_QUEUE_URL: http://localstack:4566/000000000000/ordenes-pendientes
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    depends_on:
+      postgres: {condition: service_healthy}
+      localstack: {condition: service_healthy}
+    expose: ["8083"]
+
+  tickets-service:
+    build: ../eventpass-tickets-service
+    environment:
+      <<: *appenv
+      DB_URL: jdbc:postgresql://postgres:5432/eventpass_tickets
+      SERVER_PORT: 8084
+    depends_on:
+      postgres: {condition: service_healthy}
+    expose: ["8084"]
+
+  order-processor:
+    build: ../eventpass-order-processor
+    environment:
+      SQS_ENDPOINT: http://localstack:4566
+      SQS_QUEUE_URL: http://localstack:4566/000000000000/ordenes-pendientes
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      EVENTS_URL: http://events-service:8082
+      ORDERS_URL: http://orders-service:8083
+      TICKETS_URL: http://tickets-service:8084
+    depends_on:
+      localstack: {condition: service_healthy}
+      events-service: {condition: service_started}
+      orders-service: {condition: service_started}
+      tickets-service: {condition: service_started}
+
+  gateway:
+    build: ../eventpass-gateway
+    ports: ["8080:8080"]
+    depends_on:
+      auth-service: {condition: service_started}
+      events-service: {condition: service_started}
+      orders-service: {condition: service_started}
+      tickets-service: {condition: service_started}
+
+volumes:
+  pgdata:

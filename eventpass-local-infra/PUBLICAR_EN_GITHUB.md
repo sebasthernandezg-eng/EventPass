@@ -1,0 +1,1 @@
+Usa las instrucciones del archivo `PUBLICAR_EN_GITHUB.md` de la carpeta principal del paquete EventPass. Esta carpeta debe publicarse como repositorio `eventpass-local-infra` y clonarse en el mismo directorio padre que los seis repositorios de servicios, para que `docker-compose.yml` encuentre las rutas `../eventpass-*`.

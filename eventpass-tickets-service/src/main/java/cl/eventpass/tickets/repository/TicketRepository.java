@@ -1,0 +1,2 @@
+package cl.eventpass.tickets.repository; import cl.eventpass.tickets.model.Ticket; import org.springframework.data.jpa.repository.*; import org.springframework.data.repository.query.Param; import java.util.*;
+public interface TicketRepository extends JpaRepository<Ticket,Long>{List<Ticket> findByBuyerId(Long buyerId); List<Ticket> findByOrderId(Long orderId); Optional<Ticket> findByAccessCode(String code); @Modifying @Query("update Ticket t set t.used=true where t.accessCode=:code and t.used=false") int useOnce(@Param("code") String code);}
